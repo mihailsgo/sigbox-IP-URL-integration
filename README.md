@@ -140,6 +140,8 @@ The **[Process Service integration](https://github.com/mihailsgo/trustlynx-signb
 
 The **`data` query value** only pre-fills the **internal portal browser form**. That form uses extra keys (including **`method`**) so the UI can treat **`personal`** as either a **phone number** or a **national personal code** input. When the operator submits, the portal maps the form to the Process Service shape; **`method` is not sent** to the process API.
 
+**Which `method` is correct?** It must **match what you put in `personal`**: use **`PERSONALCODE`** when `personal` is a **national personal code** (like the Latvian-style values in the examples below). Use **`PHONE`** when `personal` is a **mobile number** in the format your portal expects. Both strings are uppercase. Process Service still only stores the resulting value as **`signerPersonalCode`**.
+
 **Practical takeaway:** for **server-side** integration, follow the Process Service guide and ignore `method`. For **URL + `data`** integration, keep the examples as-is (they mirror the portal form), or skip `data` and use **`id` only** so signers are entered entirely in the UI.
 
 ### 7.1 JSON shape (reference)
@@ -173,7 +175,7 @@ Each **signer** object:
 | `anonymous` | `false` | Anonymous signing flag per policy. |
 | `comment` | `"Please sign by Friday."` | Instruction shown in context of the step. |
 | `signerComment` | `""` | Extra signer-specific comment field. |
-| `method` | `"PHONE"` | **Portal form only** — switches phone vs personal-code input for **`personal`**; **not** part of Process Service JSON ([see above](#process-service-vs-data-json)). |
+| `method` | `"PERSONALCODE"` or `"PHONE"` | **Portal form only** — must align with **`personal`** ([see above](#process-service-vs-data-json)); examples use **`PERSONALCODE`** because **`personal`** holds national codes. |
 | `signerLanguage` | `"en"` or `"lv"` | Language for messaging where supported. |
 
 Your tenant may require **additional keys** for document profile attributes (e.g. department code). TrustLynx will list those for you; add them at the **top level** of the JSON next to the fields above.
@@ -209,7 +211,7 @@ Scenario: HR system uploaded `Resignation_Jane_Doe.pdf`; archive id is `545963a4
           "anonymous": false,
           "comment": "Please sign by end of week.",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "en"
         }
       ]
@@ -258,7 +260,7 @@ Replace `documentType` with your real profile id.
           "anonymous": false,
           "comment": "Sign your resignation document.",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "lv"
         }
       ]
@@ -276,7 +278,7 @@ Replace `documentType` with your real profile id.
           "anonymous": false,
           "comment": "Approve after employee has signed.",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "en"
         }
       ]
@@ -319,7 +321,7 @@ Step order follows the order of objects in **`groups`**. Signers **inside the sa
           "anonymous": false,
           "comment": "Review for compliance.",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "en"
         },
         {
@@ -332,7 +334,7 @@ Step order follows the order of objects in **`groups`**. Signers **inside the sa
           "anonymous": false,
           "comment": "Confirm commercial terms.",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "en"
         }
       ]
@@ -350,7 +352,7 @@ Step order follows the order of objects in **`groups`**. Signers **inside the sa
           "anonymous": false,
           "comment": "Final approval to execute.",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "en"
         }
       ]
@@ -391,7 +393,7 @@ Step order follows the order of objects in **`groups`**. Signers **inside the sa
           "anonymous": false,
           "comment": "",
           "signerComment": "",
-          "method": "PHONE",
+          "method": "PERSONALCODE",
           "signerLanguage": "en"
         }
       ]
