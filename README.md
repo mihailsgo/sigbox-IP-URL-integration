@@ -487,7 +487,3 @@ Notes on the example image:
 | **Archive document id** | Identifier returned when a file is stored in SignBox archive; value for query parameter **`id`** on create pages. |
 | **Signing process id** | Identifier of a started workflow; used in **`/history/{processId}`**. |
 | **Document profile id** | Technical id (`documentType` in JSON) that selects validation rules and attributes in SignBox. |
-
----
-
-**Document version:** 2.3 (May 2026) — client-facing. Confirm behaviour and profile ids with TrustLynx for your deployment.
