@@ -176,7 +176,7 @@ Each **signer** object:
 | `comment` | `"Please sign by Friday."` | Instruction shown in context of the step. |
 | `signerComment` | `""` | Extra signer-specific comment field. |
 | `method` | `"PERSONALCODE"` or `"PHONE"` | **Portal form only** — must align with **`personal`** ([see above](#process-service-vs-data-json)); examples use **`PERSONALCODE`** because **`personal`** holds national codes. |
-| `signerLanguage` | `"en"` or `"lv"` | Language for messaging where supported. |
+| `signerLanguage` | `"en"`, `"lv"`, `"et"`, `"pl"`, … | **Tenant-configured.** The portal accepts whatever the deployment lists in its `signerLanguages` config — ask TrustLynx for the production set. The values above are common examples, not a closed list. |
 
 Your tenant may require **additional keys** for document profile attributes (e.g. department code). TrustLynx will list those for you; add them at the **top level** of the JSON next to the fields above.
 
@@ -409,6 +409,41 @@ The user completes empty fields in the portal. Prefer this pattern when URLs mus
 
 ---
 
+### 7.2 Live walkthrough — what the user sees after the redirect
+
+The screenshot below was captured against a real SignBox deployment by opening:
+
+```text
+https://{portal}/?data={encodedBase64}
+```
+
+where `{encodedBase64}` is Example A's JSON encoded as documented in
+[section 7](#7-data-parameter--json-examples), with `documentType` set to a
+real document profile id from the tenant. After Keycloak login the user
+lands on the **create process** page with everything pre-filled — the
+correct **Document type**, a populated **signer row** (name, country,
+personal code, email, role), and the **comment for all recipients** —
+ready for them to review and click **Start signing process**:
+
+![SignBox internal portal create-process page reached via {portal}/?data=… with all signer, document-type and comment fields pre-populated](images/portal-prefilled.png)
+
+Notes on the example image:
+
+- The **Your email** field shows a placeholder — in production it
+  auto-fills from the logged-in user's profile, **overriding any
+  `processInitiatorEmail`** you pass in `data`. Treat that field as a
+  display-only hint when crafting URL payloads.
+- The **Do not notify** checkbox is rendered **checked** because the JSON
+  passed `notification: true`. The control's label inverts the boolean
+  — internally the flag stores "user has explicitly opted out of
+  notifications," so `true` means **no email reminder will be sent**.
+  Set `notification: false` (the form default) when you want SignBox to
+  notify the participant.
+- The same form layout is reached via `/eseal` with `eSealOnly: true`
+  defaults; query parameters and `data` shape are identical.
+
+---
+
 ## 8. Step-by-step checklist for developers
 
 1. Obtain **portal base URL** and **document profile ids** from TrustLynx.
@@ -455,4 +490,4 @@ The user completes empty fields in the portal. Prefer this pattern when URLs mus
 
 ---
 
-**Document version:** 2.2 (March 2026) — client-facing. Confirm behaviour and profile ids with TrustLynx for your deployment.
+**Document version:** 2.3 (May 2026) — client-facing. Confirm behaviour and profile ids with TrustLynx for your deployment.
