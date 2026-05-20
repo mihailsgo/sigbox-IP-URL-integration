@@ -1,10 +1,10 @@
-# SignBox internal portal — URL integration guide
+# SignBox internal portal - URL integration guide
 
 This guide is for **client development teams** integrating a third-party system with TrustLynx **SignBox internal portal**: your user stores a document in the **archive**, opens the portal via a **link you build**, completes signing setup in the browser, and can return to your application.
 
 For **starting signing processes from your own backend** (no portal UI), use the same API contract described here:
 
-**[Process Service integration (JSON API)](https://github.com/mihailsgo/trustlynx-signbox-process-integration)** — `POST /api/process`, process lookup, mass launch patterns, and field reference.
+**[Process Service integration (JSON API)](https://github.com/mihailsgo/trustlynx-signbox-process-integration)** - `POST /api/process`, process lookup, mass launch patterns, and field reference.
 
 ---
 
@@ -25,7 +25,7 @@ Before development, confirm with your TrustLynx contact:
 - **Internal portal base URL** (example: `https://signbox-internal.yourcompany.com`).
 - How your users **sign in** (typically corporate identity / Keycloak).
 - The **archive document id** returned after upload (same value SignBox uses to attach a process to an existing file).
-- Allowed values for **`documentType`** in pre-filled data — this is your tenant’s **document profile id** (often a UUID or technical key), not only a display name. Wrong or unknown profile ids cause validation errors when starting the process.
+- Allowed values for **`documentType`** in pre-filled data - this is your tenant’s **document profile id** (often a UUID or technical key), not only a display name. Wrong or unknown profile ids cause validation errors when starting the process.
 - Optional: **`returnurl` / `redirectUrl` allow-list** rules if your security team requires it.
 
 ---
@@ -39,13 +39,13 @@ The internal portal link uses query parameter **`id`**. That value must be the *
 | Step | Topic | Link |
 |------|--------|------|
 | 1 | Get Keycloak (OAuth) access token | **[1) Get Keycloak Token](https://github.com/mihailsgo/trustlynx-signing-integration#1-get-keycloak-token)** |
-| 2 | Upload PDF — `POST …/api/document/create` with multipart `file` and `documentData` | **[2) Upload PDF with Document Create API (multipart)](https://github.com/mihailsgo/trustlynx-signing-integration#2-upload-pdf-with-document-create-api-multipart)** |
+| 2 | Upload PDF - `POST …/api/document/create` with multipart `file` and `documentData` | **[2) Upload PDF with Document Create API (multipart)](https://github.com/mihailsgo/trustlynx-signing-integration#2-upload-pdf-with-document-create-api-multipart)** |
 
 After a successful upload, use the **`id`** field from the JSON response (example in that guide: `545963a4-3dc5-46b1-b64a-f2d292f9f37e`) as **`id`** in your portal URL.
 
 **Important:** The same repository also describes **redirect URL**, **external signing page**, and **download** for the *pure signing* journey. For **internal portal** integration you only need **token + archive create** (sections **1** and **2** above); you do **not** need the redirect-to-signing-page steps unless you are implementing that separate product flow.
 
-Base URLs (`AUTH_BASE_URL`, `ARCHIVE_BASE_URL`, realm, client id) in that guide are **examples** — your TrustLynx project supplies production values.
+Base URLs (`AUTH_BASE_URL`, `ARCHIVE_BASE_URL`, realm, client id) in that guide are **examples** - your TrustLynx project supplies production values.
 
 ---
 
@@ -57,7 +57,7 @@ Base URLs (`AUTH_BASE_URL`, `ARCHIVE_BASE_URL`, realm, client id) in that guide 
 4. The portal loads the document from the archive, shows the **create process** screen, and the user adds or confirms signers, deadlines, and options.
 5. The user starts the process from the portal. Depending on configuration, the user may be sent back via **`returnurl`** or a response-driven redirect.
 
-No access to SignBox source code is required—only URLs, parameters, and (for advanced use) the JSON shape below.
+No access to SignBox source code is required - only URLs, parameters, and (for advanced use) the JSON shape below.
 
 ---
 
@@ -70,7 +70,7 @@ Replace `{portal}` with your internal portal base URL (no trailing slash require
 | `{portal}/` | **Create signing process** (main screen). |
 | `{portal}/eseal` | Create process with **e-seal** oriented defaults (same query parameters as `/`). |
 | `{portal}/history` | List of processes (mainly for portal users). |
-| `{portal}/history/{processId}` | **Details of one process**. `{processId}` is the **SignBox process id** returned when a process is created—not the archive document id. |
+| `{portal}/history/{processId}` | **Details of one process**. `{processId}` is the **SignBox process id** returned when a process is created - not the archive document id. |
 
 ### Critical distinction
 
@@ -86,7 +86,7 @@ Build links as normal HTTPS URLs with a query string. **Encode** values that con
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | **`id`** | No | **Archive document id.** When present, the portal assumes the file already lives in the archive: it **does not** ask the user to upload a file again. It shows container information and links the new process to this document. |
-| **`returnurl`** | No | **Full URL** (https://…) back to your application. The portal shows a **persistent “return” control** and may pass this value to the backend when the process is created. If SignBox responds with a redirect location, the browser may navigate there instead of only showing a success message—behaviour depends on your environment. |
+| **`returnurl`** | No | **Full URL** (https://…) back to your application. The portal shows a **persistent “return” control** and may pass this value to the backend when the process is created. If SignBox responds with a redirect location, the browser may navigate there instead of only showing a success message - behaviour depends on your environment. |
 | **`redirectUrl`** | No | **Full URL** used for the portal’s **Cancel** action only. It does **not** replace `returnurl` for the return ribbon. Use it when “cancel” should go somewhere different from “success return”. |
 | **`data`** | No | **Optional.** Base64-encoded JSON that **pre-fills** the create form (signers, comment, document profile, flags, etc.). See [section 7](#7-data-parameter--json-examples). Usually combined with **`id`** so the file comes from the archive while steps and participants are pre-populated. |
 
@@ -120,23 +120,23 @@ https://{portal}/history/0b2e2d71-3ddd-4f42-8904-c43eb7d0c3fd
 
 ---
 
-## 7. `data` parameter — JSON examples
+## 7. `data` parameter - JSON examples
 
 The portal expects **`data`** to be **standard Base64** encoding of a **UTF-8 JSON** string.
 
 - In **JavaScript** in the browser, raw `btoa(json)` only works if the JSON is ASCII-only. For names/comments with letters like **ā, ü, 中文**, use UTF-8 safe encoding, for example:
 
-  ```javascript
-  const json = JSON.stringify(payload);
-  const data = btoa(unescape(encodeURIComponent(json)));
-  const url = `https://{portal}/?id=${encodeURIComponent(documentId)}&data=${encodeURIComponent(data)}`;
-  ```
+ ```javascript
+ const json = JSON.stringify(payload);
+ const data = btoa(unescape(encodeURIComponent(json)));
+ const url = `https://{portal}/?id=${encodeURIComponent(documentId)}&data=${encodeURIComponent(data)}`;
+ ```
 
 - Keep payloads **small**. Very long URLs can be blocked by browsers or proxies. For heavy automation, prefer **[Process Service API](https://github.com/mihailsgo/trustlynx-signbox-process-integration)** or **`id`** without `data`.
 
 ### Process Service vs `data` JSON
 
-The **[Process Service integration](https://github.com/mihailsgo/trustlynx-signbox-process-integration)** documents the JSON the service **stores**: each step signer includes fields such as **`signerName`**, **`signerEmail`**, **`signerPersonalCode`**, **`signerCountry`**, **`signerRole`**, **`commentForSigner`**, **`signerLanguage`**, etc. **There is no signer `method` field in that model** — Process Service does not persist or validate `PHONE` / `PERSONALCODE`.
+The **[Process Service integration](https://github.com/mihailsgo/trustlynx-signbox-process-integration)** documents the JSON the service **stores**: each step signer includes fields such as **`signerName`**, **`signerEmail`**, **`signerPersonalCode`**, **`signerCountry`**, **`signerRole`**, **`commentForSigner`**, **`signerLanguage`**, etc. **There is no signer `method` field in that model** - Process Service does not persist or validate `PHONE` / `PERSONALCODE`.
 
 The **`data` query value** only pre-fills the **internal portal browser form**. That form uses extra keys (including **`method`**) so the UI can treat **`personal`** as either a **phone number** or a **national personal code** input. When the operator submits, the portal maps the form to the Process Service shape; **`method` is not sent** to the process API.
 
@@ -175,14 +175,14 @@ Each **signer** object:
 | `anonymous` | `false` | Anonymous signing flag per policy. |
 | `comment` | `"Please sign by Friday."` | Instruction shown in context of the step. |
 | `signerComment` | `""` | Extra signer-specific comment field. |
-| `method` | `"PERSONALCODE"` or `"PHONE"` | **Portal form only** — must align with **`personal`** ([see above](#process-service-vs-data-json)); examples use **`PERSONALCODE`** because **`personal`** holds national codes. |
-| `signerLanguage` | `"en"`, `"lv"`, `"et"`, `"pl"`, … | **Tenant-configured.** The portal accepts whatever the deployment lists in its `signerLanguages` config — ask TrustLynx for the production set. The values above are common examples, not a closed list. |
+| `method` | `"PERSONALCODE"` or `"PHONE"` | **Portal form only** - must align with **`personal`** ([see above](#process-service-vs-data-json)); examples use **`PERSONALCODE`** because **`personal`** holds national codes. |
+| `signerLanguage` | `"en"`, `"lv"`, `"et"`, `"pl"`, … | **Tenant-configured.** The portal accepts whatever the deployment lists in its `signerLanguages` config - ask TrustLynx for the production set. The values above are common examples, not a closed list. |
 
 Your tenant may require **additional keys** for document profile attributes (e.g. department code). TrustLynx will list those for you; add them at the **top level** of the JSON next to the fields above.
 
 ---
 
-### Example A — Single employee signs a resignation (archive document already known)
+### Example A - Single employee signs a resignation (archive document already known)
 
 Scenario: HR system uploaded `Resignation_Jane_Doe.pdf`; archive id is `545963a4-3dc5-46b1-b64a-f2d292f9f37e`. Pre-fill one signer and a short comment.
 
@@ -190,36 +190,36 @@ Scenario: HR system uploaded `Resignation_Jane_Doe.pdf`; archive id is `545963a4
 
 ```json
 {
-  "signFirst": false,
-  "comment": "Please review and sign your resignation agreement.",
-  "documentName": "Resignation_Jane_Doe.pdf",
-  "documents": [],
-  "isAsice": false,
-  "processInitiatorEmail": "hr.integration@example.com",
-  "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "groups": [
-    {
-      "dueDate": "2026-03-31T23:59:59+02:00",
-      "signers": [
-        {
-          "name": "Jane Employee",
-          "email": "jane.employee@example.com",
-          "country": "LV",
-          "personal": "120292-12345",
-          "role": "SIGNER",
-          "notification": true,
-          "anonymous": false,
-          "comment": "Please sign by end of week.",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "en"
-        }
-      ]
-    }
-  ],
-  "addeseal": false,
-  "mergePdfs": false,
-  "eSealOnly": false
+ "signFirst": false,
+ "comment": "Please review and sign your resignation agreement.",
+ "documentName": "Resignation_Jane_Doe.pdf",
+ "documents": [],
+ "isAsice": false,
+ "processInitiatorEmail": "hr.integration@example.com",
+ "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+ "groups": [
+ {
+ "dueDate": "2026-03-31T23:59:59+02:00",
+ "signers": [
+ {
+ "name": "Jane Employee",
+ "email": "jane.employee@example.com",
+ "country": "LV",
+ "personal": "120292-12345",
+ "role": "SIGNER",
+ "notification": true,
+ "anonymous": false,
+ "comment": "Please sign by end of week.",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "en"
+ }
+ ]
+ }
+ ],
+ "addeseal": false,
+ "mergePdfs": false,
+ "eSealOnly": false
 }
 ```
 
@@ -233,60 +233,60 @@ Replace `documentType` with your real profile id.
 
 ---
 
-### Example B — Employee signs first, then HR approves (two steps)
+### Example B - Employee signs first, then HR approves (two steps)
 
 **JSON (before Base64):**
 
 ```json
 {
-  "signFirst": false,
-  "comment": "Resignation workflow — employee then HR approval.",
-  "documentName": "Resignation_John_Doe.pdf",
-  "documents": [],
-  "isAsice": false,
-  "processInitiatorEmail": "hr.integration@example.com",
-  "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "groups": [
-    {
-      "dueDate": "2026-04-01T17:00:00+02:00",
-      "signers": [
-        {
-          "name": "John Doe",
-          "email": "john.doe@example.com",
-          "country": "LV",
-          "personal": "010190-12345",
-          "role": "SIGNER",
-          "notification": true,
-          "anonymous": false,
-          "comment": "Sign your resignation document.",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "lv"
-        }
-      ]
-    },
-    {
-      "dueDate": "2026-04-03T17:00:00+02:00",
-      "signers": [
-        {
-          "name": "HR Manager",
-          "email": "hr.manager@example.com",
-          "country": "LV",
-          "personal": "050580-10001",
-          "role": "APPROVER",
-          "notification": true,
-          "anonymous": false,
-          "comment": "Approve after employee has signed.",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "en"
-        }
-      ]
-    }
-  ],
-  "addeseal": false,
-  "mergePdfs": false,
-  "eSealOnly": false
+ "signFirst": false,
+ "comment": "Resignation workflow - employee then HR approval.",
+ "documentName": "Resignation_John_Doe.pdf",
+ "documents": [],
+ "isAsice": false,
+ "processInitiatorEmail": "hr.integration@example.com",
+ "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+ "groups": [
+ {
+ "dueDate": "2026-04-01T17:00:00+02:00",
+ "signers": [
+ {
+ "name": "John Doe",
+ "email": "john.doe@example.com",
+ "country": "LV",
+ "personal": "010190-12345",
+ "role": "SIGNER",
+ "notification": true,
+ "anonymous": false,
+ "comment": "Sign your resignation document.",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "lv"
+ }
+ ]
+ },
+ {
+ "dueDate": "2026-04-03T17:00:00+02:00",
+ "signers": [
+ {
+ "name": "HR Manager",
+ "email": "hr.manager@example.com",
+ "country": "LV",
+ "personal": "050580-10001",
+ "role": "APPROVER",
+ "notification": true,
+ "anonymous": false,
+ "comment": "Approve after employee has signed.",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "en"
+ }
+ ]
+ }
+ ],
+ "addeseal": false,
+ "mergePdfs": false,
+ "eSealOnly": false
 }
 ```
 
@@ -294,114 +294,114 @@ Step order follows the order of objects in **`groups`**. Signers **inside the sa
 
 ---
 
-### Example C — Contract with parallel reviewers in step 1, approver in step 2
+### Example C - Contract with parallel reviewers in step 1, approver in step 2
 
 **JSON (before Base64):**
 
 ```json
 {
-  "signFirst": true,
-  "comment": "Vendor framework agreement — legal and procurement review.",
-  "documentName": "Framework_Agreement_VendorX.pdf",
-  "documents": [],
-  "isAsice": false,
-  "processInitiatorEmail": "procurement@example.com",
-  "documentType": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
-  "groups": [
-    {
-      "dueDate": null,
-      "signers": [
-        {
-          "name": "Legal Counsel",
-          "email": "legal@example.com",
-          "country": "LV",
-          "personal": "110381-20002",
-          "role": "VIEWER",
-          "notification": true,
-          "anonymous": false,
-          "comment": "Review for compliance.",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "en"
-        },
-        {
-          "name": "Procurement Lead",
-          "email": "procurement.lead@example.com",
-          "country": "LV",
-          "personal": "080575-20003",
-          "role": "VIEWER",
-          "notification": true,
-          "anonymous": false,
-          "comment": "Confirm commercial terms.",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "en"
-        }
-      ]
-    },
-    {
-      "dueDate": "2026-04-10T12:00:00+03:00",
-      "signers": [
-        {
-          "name": "CFO",
-          "email": "cfo@example.com",
-          "country": "LV",
-          "personal": "020270-10001",
-          "role": "APPROVER",
-          "notification": true,
-          "anonymous": false,
-          "comment": "Final approval to execute.",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "en"
-        }
-      ]
-    }
-  ],
-  "addeseal": false,
-  "mergePdfs": false,
-  "eSealOnly": false
+ "signFirst": true,
+ "comment": "Vendor framework agreement - legal and procurement review.",
+ "documentName": "Framework_Agreement_VendorX.pdf",
+ "documents": [],
+ "isAsice": false,
+ "processInitiatorEmail": "procurement@example.com",
+ "documentType": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+ "groups": [
+ {
+ "dueDate": null,
+ "signers": [
+ {
+ "name": "Legal Counsel",
+ "email": "legal@example.com",
+ "country": "LV",
+ "personal": "110381-20002",
+ "role": "VIEWER",
+ "notification": true,
+ "anonymous": false,
+ "comment": "Review for compliance.",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "en"
+ },
+ {
+ "name": "Procurement Lead",
+ "email": "procurement.lead@example.com",
+ "country": "LV",
+ "personal": "080575-20003",
+ "role": "VIEWER",
+ "notification": true,
+ "anonymous": false,
+ "comment": "Confirm commercial terms.",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "en"
+ }
+ ]
+ },
+ {
+ "dueDate": "2026-04-10T12:00:00+03:00",
+ "signers": [
+ {
+ "name": "CFO",
+ "email": "cfo@example.com",
+ "country": "LV",
+ "personal": "020270-10001",
+ "role": "APPROVER",
+ "notification": true,
+ "anonymous": false,
+ "comment": "Final approval to execute.",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "en"
+ }
+ ]
+ }
+ ],
+ "addeseal": false,
+ "mergePdfs": false,
+ "eSealOnly": false
 }
 ```
 
 ---
 
-### Example D — Minimal pre-fill (profile + comment only; user adds signers in UI)
+### Example D - Minimal pre-fill (profile + comment only; user adds signers in UI)
 
 **JSON (before Base64):**
 
 ```json
 {
-  "signFirst": false,
-  "comment": "Imported from case HR-88421.",
-  "documentName": "",
-  "documents": [],
-  "isAsice": false,
-  "processInitiatorEmail": "",
-  "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "groups": [
-    {
-      "dueDate": null,
-      "signers": [
-        {
-          "name": "",
-          "email": "",
-          "country": "LV",
-          "personal": "",
-          "role": "SIGNER",
-          "notification": false,
-          "anonymous": false,
-          "comment": "",
-          "signerComment": "",
-          "method": "PERSONALCODE",
-          "signerLanguage": "en"
-        }
-      ]
-    }
-  ],
-  "addeseal": false,
-  "mergePdfs": false,
-  "eSealOnly": false
+ "signFirst": false,
+ "comment": "Imported from case HR-88421.",
+ "documentName": "",
+ "documents": [],
+ "isAsice": false,
+ "processInitiatorEmail": "",
+ "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+ "groups": [
+ {
+ "dueDate": null,
+ "signers": [
+ {
+ "name": "",
+ "email": "",
+ "country": "LV",
+ "personal": "",
+ "role": "SIGNER",
+ "notification": false,
+ "anonymous": false,
+ "comment": "",
+ "signerComment": "",
+ "method": "PERSONALCODE",
+ "signerLanguage": "en"
+ }
+ ]
+ }
+ ],
+ "addeseal": false,
+ "mergePdfs": false,
+ "eSealOnly": false
 }
 ```
 
@@ -409,7 +409,7 @@ The user completes empty fields in the portal. Prefer this pattern when URLs mus
 
 ---
 
-### 7.2 Live walkthrough — what the user sees after the redirect
+### 7.2 Live walkthrough - what the user sees after the redirect
 
 The screenshot below was captured against a real SignBox deployment by opening:
 
@@ -420,41 +420,41 @@ https://{portal}/?data={encodedBase64}
 where `{encodedBase64}` is Example A's JSON encoded as documented in
 [section 7](#7-data-parameter--json-examples), with `documentType` set to a
 real document profile id from the tenant. After Keycloak login the user
-lands on the **create process** page with everything pre-filled — the
+lands on the **create process** page with everything pre-filled - the
 correct **Document type**, a populated **signer row** (name, country,
-personal code, email, role), and the **comment for all recipients** —
+personal code, email, role), and the **comment for all recipients** - 
 ready for them to review and click **Start signing process**:
 
 ![SignBox internal portal create-process page reached via {portal}/?data=… with all signer, document-type and comment fields pre-populated](images/portal-prefilled.png)
 
 Notes on the example image:
 
-- The **Your email** field shows a placeholder — in production it
-  auto-fills from the logged-in user's profile, **overriding any
-  `processInitiatorEmail`** you pass in `data`. Treat that field as a
-  display-only hint when crafting URL payloads.
+- The **Your email** field shows a placeholder - in production it
+ auto-fills from the logged-in user's profile, **overriding any
+ `processInitiatorEmail`** you pass in `data`. Treat that field as a
+ display-only hint when crafting URL payloads.
 - The **Do not notify** checkbox is rendered **checked** because the JSON
-  passed `notification: true`. The control's label inverts the boolean
-  — internally the flag stores "user has explicitly opted out of
-  notifications," so `true` means **no email reminder will be sent**.
-  Set `notification: false` (the form default) when you want SignBox to
-  notify the participant.
+ passed `notification: true`. The control's label inverts the boolean
+ - internally the flag stores "user has explicitly opted out of
+ notifications," so `true` means **no email reminder will be sent**.
+ Set `notification: false` (the form default) when you want SignBox to
+ notify the participant.
 - The same form layout is reached via `/eseal` with `eSealOnly: true`
-  defaults; query parameters and `data` shape are identical.
+ defaults; query parameters and `data` shape are identical.
 
 ---
 
 ## 8. Step-by-step checklist for developers
 
 1. Obtain **portal base URL** and **document profile ids** from TrustLynx.
-2. Implement **archive upload**: follow **[archive sections 1–2](https://github.com/mihailsgo/trustlynx-signing-integration#1-get-keycloak-token)** in the signing integration guide; capture **`id`** from the create response.
+2. Implement **archive upload**: follow **[archive sections 1-2](https://github.com/mihailsgo/trustlynx-signing-integration#1-get-keycloak-token)** in the signing integration guide; capture **`id`** from the create response.
 3. Build **return URL** (and optional **cancel URL**) on your site.
 4. Optionally build **`data`** JSON and Base64-encode it (UTF-8 safe); remember it targets the **portal form**, not extra Process Service fields ([alignment note](#process-service-vs-data-json)).
-5. Redirect:  
-   `{portal}/?id={documentId}&returnurl={...}&redirectUrl={...}&data={...}`  
-   (omit unused parameters).
+5. Redirect: 
+ `{portal}/?id={documentId}&returnurl={...}&redirectUrl={...}&data={...}` 
+ (omit unused parameters).
 6. After login, confirm the portal shows the expected document and pre-filled data.
-7. Test **happy path** and **refresh/retry** (avoid duplicate processes if users repeat the same link—coordinate with TrustLynx on rules and optional API checks; see Process Service guide).
+7. Test **happy path** and **refresh/retry** (avoid duplicate processes if users repeat the same link - coordinate with TrustLynx on rules and optional API checks; see Process Service guide).
 8. For **fully automated** creation without opening the portal, implement **[Process Service API](https://github.com/mihailsgo/trustlynx-signbox-process-integration)** instead.
 
 ---
