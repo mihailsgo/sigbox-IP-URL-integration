@@ -34,14 +34,76 @@ Before development, confirm with your TrustLynx contact:
 
 The internal portal link uses query parameter **`id`**. That value must be the **archive document id** returned when your backend stores the file in SignBox archive.
 
-**Full step-by-step** (obtain access token, multipart upload, `documentData` query shape, response fields, code samples) is documented in the **pure signing integration** guide:
+**Full step-by-step** (obtain access token, multipart upload, response fields, code samples) is documented in the **pure signing integration** guide:
 
 | Step | Topic | Link |
 |------|--------|------|
 | 1 | Get Keycloak (OAuth) access token | **[1) Get Keycloak Token](https://github.com/mihailsgo/trustlynx-signing-integration#1-get-keycloak-token)** |
-| 2 | Upload PDF - `POST …/api/document/create` with multipart `file` and `documentData` | **[2) Upload PDF with Document Create API (multipart)](https://github.com/mihailsgo/trustlynx-signing-integration#2-upload-pdf-with-document-create-api-multipart)** |
+| 2 | Upload PDF - `POST …/api/document/create` (multipart `file` body + `documentData` query parameter) | **[2) Upload PDF with Document Create API (multipart)](https://github.com/mihailsgo/trustlynx-signing-integration#2-upload-pdf-with-document-create-api-multipart)** |
 
-After a successful upload, use the **`id`** field from the JSON response (example in that guide: `545963a4-3dc5-46b1-b64a-f2d292f9f37e`) as **`id`** in your portal URL.
+### 2.1 Request shape - what trips integrators up
+
+The archive endpoint is a Spring multipart POST with **one** unusual detail:
+`documentData` is **not** a multipart field. It is a **query parameter**
+carrying a URL-encoded JSON object. Only `file` lives in the multipart body.
+
+```text
+POST {ARCHIVE_BASE_URL}/api/document/create?documentData=<URL-encoded JSON>
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+  file=<binary PDF>
+```
+
+Minimal working `documentData` JSON shape (before URL-encoding):
+
+```json
+{
+  "documentFilename": "<filename-shown-to-portal>.pdf",
+  "objectName":       "<same-or-stable-business-key>.pdf",
+  "contentType":      "application/pdf",
+  "documentType":     "<storage-type-code>"
+}
+```
+
+`documentType` here is a **string storage code** (e.g. `"HRDocument"`,
+`"DMSSDoc"`) that the archive uses to classify the binary. **This is not
+the same field as `documentType` inside the portal `data` JSON in
+[section 7](#7-data-parameter--json-examples)** - that one is the document
+profile UUID. Both fields share a name, neither is wrong; they live on
+different requests and refer to different concepts. Ask TrustLynx for the
+matching pair of values for your tenant.
+
+If your tenant's profile defines extra attributes that the archive should
+store with the file, add a nested `documentData` object (yes, same name
+again - a quirk of the schema):
+
+```json
+{
+  "documentFilename": "...",
+  "objectName":       "...",
+  "contentType":      "application/pdf",
+  "documentType":     "HRDocument",
+  "documentData":     { "caseId": "CASE-2026-001", "department": "HR" }
+}
+```
+
+The exact attribute keys come from the document profile configuration -
+not from this guide.
+
+### 2.2 Response and what to keep
+
+Successful create returns JSON; capture the **`id`** field:
+
+```json
+{
+  "id":          "545963a4-3dc5-46b1-b64a-f2d292f9f37e",
+  "externalid":  "0fb9a0ae-0f83-4c2b-8b74-d87643396b57",
+  "archiveName": "FS-MAIN"
+}
+```
+
+The `id` value is what you pass as `?id=` on the portal URL in the next
+step. `externalid` and `archiveName` are not used by the URL integration.
 
 **Important:** The same repository also describes **redirect URL**, **external signing page**, and **download** for the *pure signing* journey. For **internal portal** integration you only need **token + archive create** (sections **1** and **2** above); you do **not** need the redirect-to-signing-page steps unless you are implementing that separate product flow.
 
@@ -156,8 +218,8 @@ All examples share the same overall structure:
 | `documents` | array | Always **`[]`** when using **`id`** (file is not uploaded from the form). |
 | `isAsice` | boolean | Container format preference where applicable. |
 | `processInitiatorEmail` | string | Email of initiating party (often overwritten by logged-in user when they open the link). |
-| `documentType` | string | **Your document profile id** from TrustLynx configuration. |
-| `groups` | array | Signing **steps**. Each item has `dueDate` (`null` or ISO-8601 string) and `signers` (array). |
+| `documentType` | string (UUID) | **Your document profile id** from TrustLynx (typically a UUID, e.g. `37a0e0ce-fb85-49ab-b6d2-9ae3ecee5664`). Note: this is **not** the same `documentType` you pass on the archive call in [section 2](#21-request-shape---what-trips-integrators-up) - that one is a storage-type string like `"HRDocument"`. Same name, different requests, different values. |
+| `groups` | array | Signing **steps**. Each item has `dueDate` and `signers` (array). **Use `dueDate: null` for now** - the portal's current date parser crashes on ISO-8601 strings that include a timezone offset (e.g. `"2026-04-01T17:00:00+02:00"`); the user can pick the due date in the form after the redirect. Tracked as a portal-side issue. |
 | `addeseal` | boolean | Whether e-seal options apply in your environment. |
 | `mergePdfs` | boolean | Relevant when multiple PDFs are merged (usually `false` with archive `id`). |
 | `eSealOnly` | boolean | Use `false` on `/` for normal signing; `/eseal` flow typically uses `true`. |
@@ -199,7 +261,7 @@ Scenario: HR system uploaded `Resignation_Jane_Doe.pdf`; archive id is `545963a4
  "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
  "groups": [
  {
- "dueDate": "2026-03-31T23:59:59+02:00",
+ "dueDate": null,
  "signers": [
  {
  "name": "Jane Employee",
@@ -248,7 +310,7 @@ Replace `documentType` with your real profile id.
  "documentType": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
  "groups": [
  {
- "dueDate": "2026-04-01T17:00:00+02:00",
+ "dueDate": null,
  "signers": [
  {
  "name": "John Doe",
@@ -266,7 +328,7 @@ Replace `documentType` with your real profile id.
  ]
  },
  {
- "dueDate": "2026-04-03T17:00:00+02:00",
+ "dueDate": null,
  "signers": [
  {
  "name": "HR Manager",
@@ -340,7 +402,7 @@ Step order follows the order of objects in **`groups`**. Signers **inside the sa
  ]
  },
  {
- "dueDate": "2026-04-10T12:00:00+03:00",
+ "dueDate": null,
  "signers": [
  {
  "name": "CFO",
@@ -473,6 +535,7 @@ Notes on the example image:
 | Symptom | What to check |
 |---------|----------------|
 | Blank or error after opening link | User not logged in; wrong portal host; malformed Base64 or JSON in `data`. |
+| "Something went wrong" / "Invalid time value" after redirect | `dueDate` in `data` JSON is an ISO-8601 string with a timezone offset (e.g. `"2026-04-01T17:00:00+02:00"`). The portal's `parseISO` call crashes on this. **Workaround:** use `"dueDate": null` and let the user pick the date in the form. Tracked as a portal-side issue. |
 | Document not shown | Wrong **`id`** (not the archive document id); archive permissions; document not committed yet. |
 | Form loads but submit fails | Invalid **`documentType`**; signer fields violate policy; **`personal`** format does not match the portal control (phone vs personal code); role not enabled. |
 | URL too long | Remove or shorten **`data`**; pre-fill less; use API integration instead. |
